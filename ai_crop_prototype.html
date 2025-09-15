@@ -117,12 +117,12 @@
     </section>
 
     <section class="card">
-      <h2 class="big">Weather Snapshot (Mock)</h2>
+      <h2 class="big">Weather Snapshot</h2>
       <p class="small">This is mock data for the prototype. Replace with IMD / OpenWeather API in production.</p>
       <div id="weather" style="display:flex;gap:12px;flex-wrap:wrap"></div>
     </section>
 
-    <footer>Prototype — for demonstration only. To integrate real models. </footer>
+    <footer>Prototype — for demonstration only. </footer>
   </div>
 
   <script>
@@ -150,7 +150,7 @@
 
     let lang = localStorage.getItem('proto_lang') || 'en';
 
-    // --- Simple crop database with preference ranges (mock) ---
+    // --- Simple crop database with preference ranges ---
     const CROPS = [
       {id:'wheat', name:{en:'Wheat', hi:'गेहूँ'}, n:[40,90], p:[10,40], k:[20,80], ph:[6,7.8], moist:[30,70], baseYield:3.5},
       {id:'rice', name:{en:'Rice', hi:'चावल'}, n:[50,120], p:[15,60], k:[30,120], ph:[5.5,7.5], moist:[60,100], baseYield:4.2},
@@ -224,7 +224,7 @@
       localStorage.setItem('proto_inputs', JSON.stringify(obj));
     }
 
-    // Recommendation algorithm (mock): scores crops by how well inputs fit preferences
+    // Recommendation algorithm: scores crops by how well inputs fit preferences
     function recommend(){
       const n = Number($('nitrogen').value || 0);
       const p = Number($('phosphorus').value || 0);
@@ -252,7 +252,7 @@
         // small penalty if same as previous crop (encourage rotation)
         const rotationPenalty = (prevCrop === crop.id) ? 0.9 : 1.0;
         const finalScore = parseFloat((score * rotationPenalty).toFixed(3));
-        // estimate yield (mock): base * weighted factor
+        // estimate yield: base * weighted factor
         const soilFactor = (sN + sP + sK) / 3; // 0..1
         const yieldEst = parseFloat((crop.baseYield * (0.6 + soilFactor*0.8) * (0.8 + sM*0.4)).toFixed(2));
         return {...crop, score: finalScore, yieldEst};
@@ -267,10 +267,10 @@
             <div><strong>${c.name[lang] || c.name.en}</strong></div>
             <div class="small muted">Confidence: ${conf}%</div>
           </div>
-          <div class="small muted">Estimated yield: ${c.yieldEst} t/ha (mock)</div>
+          <div class="small muted">Estimated yield: ${c.yieldEst} t/ha </div>
           <div style="margin-top:8px">
             <strong>Fertilizer suggestion:</strong>
-            <div class="small">Apply balanced NPK. Suggested starter: ${Math.max(0, Math.round((60 - Number($('nitrogen').value || 0))/10))*1} kg NPK blend per hectare (mock).</div>
+            <div class="small">Apply balanced NPK. Suggested starter: ${Math.max(0, Math.round((60 - Number($('nitrogen').value || 0))/10))*1} kg NPK blend per hectare.</div>
             <div class="small" style="margin-top:6px"><strong>Irrigation:</strong> ${c.moist[0] >= 60 ? 'Keep flooded / higher moisture' : 'Supplemental irrigation recommended if rainfall is low.'}</div>
           </div>
         </div>`;
