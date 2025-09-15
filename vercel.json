@@ -1,0 +1,5 @@
+{
+  "routes": [
+    { "src": "/", "dest": "/ai_crop_prototype.html" }
+  ]
+}
