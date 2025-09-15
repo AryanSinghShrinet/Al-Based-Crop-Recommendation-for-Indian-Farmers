@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Crop Recommendation — Prototype</title>
+  <style>
+    :root{--bg:#f3f7f3;--card:#ffffff;--accent:#2e7d32;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0;background:var(--bg);color:#111}
+    .wrap{max-width:980px;margin:28px auto;padding:18px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(16,24,40,0.06);margin-bottom:14px}
+    label{display:block;font-weight:600;margin-bottom:6px}
+    .row{display:flex;gap:12px}
+    .col{flex:1}
+    input[type=number], input[type=text], select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e6e6}
+    button{background:var(--accent);color:white;border:none;padding:12px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+    .result-item{border-left:6px solid rgba(46,125,50,0.12);padding:12px;margin-bottom:10px;border-radius:6px;background:#fcfff8}
+    .controls{display:flex;gap:8px;align-items:center}
+    .lang-btn{background:transparent;border:1px solid #ddd;padding:6px 8px;border-radius:8px;cursor:pointer}
+    .muted{color:var(--muted)}
+    .big{font-size:18px}
+    footer{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
+    @media(max-width:720px){.row{flex-direction:column}}
+    .chip{display:inline-block;padding:6px 8px;border-radius:999px;border:1px solid #eee;background:#fff;margin-right:6px;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1 id="title">AI Crop Recommendation (Prototype)</h1>
+        <div class="small" id="subtitle">Localized, offline-first demo — mock data & simple logic</div>
+      </div>
+      <div class="controls">
+        <button class="lang-btn" id="toggleLang">हिंदी</button>
+        <button class="lang-btn" id="resetBtn">Reset</button>
+      </div>
+    </header>
+
+    <section class="card" aria-labelledby="form-heading">
+      <h2 id="form-heading" class="big">Farmer Input</h2>
+      <p class="small">Enter field details. This prototype runs locally — no server required.</p>
+
+      <div class="row" style="margin-top:10px">
+        <div class="col">
+          <label for="location">Location (village / district)</label>
+          <input type="text" id="location" placeholder="e.g. Ludhiana, Punjab" aria-label="Location">
+        </div>
+        <div style="width:120px">
+          <label>&nbsp;</label>
+          <button id="detectGeo" style="width:100%">Detect</button>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="col">
+          <label for="nitrogen">Nitrogen (N) — mg/kg</label>
+          <input type="number" id="nitrogen" min="0" max="999" step="1" placeholder="e.g. 50">
+        </div>
+        <div class="col">
+          <label for="phosphorus">Phosphorus (P) — mg/kg</label>
+          <input type="number" id="phosphorus" min="0" max="999" step="1" placeholder="e.g. 20">
+        </div>
+        <div class="col">
+          <label for="potassium">Potassium (K) — mg/kg</label>
+          <input type="number" id="potassium" min="0" max="999" step="1" placeholder="e.g. 40">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="col">
+          <label for="ph">Soil pH</label>
+          <input type="number" id="ph" step="0.1" min="3" max="10" placeholder="6.5">
+        </div>
+        <div class="col">
+          <label for="moisture">Moisture (%)</label>
+          <input type="number" id="moisture" min="0" max="100" step="1" placeholder="45">
+        </div>
+        <div class="col">
+          <label for="prevCrop">Previous Crop</label>
+          <select id="prevCrop">
+            <option value="none">-- Select --</option>
+            <option value="wheat">Wheat</option>
+            <option value="rice">Rice</option>
+            <option value="maize">Maize</option>
+            <option value="millet">Millet</option>
+            <option value="pulse">Pulses</option>
+            <option value="cotton">Cotton</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button id="recommendBtn">Get Recommendation</button>
+        <button id="printBtn" style="background:#0a66c2">Print / Save Report</button>
+        <div class="small muted">Stored locally — try the Reset button to clear.</div>
+      </div>
+
+    </section>
+
+    <section class="card" id="resultsCard" aria-live="polite">
+      <h2 class="big">Recommendations</h2>
+      <div id="results" style="margin-top:8px">
+        <div class="small muted">No recommendation yet. Fill the form and click "Get Recommendation".</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <strong>Feedback:</strong>
+        <button id="thumbUp" class="chip">👍 Helpful</button>
+        <button id="thumbDown" class="chip">👎 Not Useful</button>
+        <span id="feedbackMsg" class="small muted" style="margin-left:8px"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="big">Weather Snapshot (Mock)</h2>
+      <p class="small">This is mock data for the prototype. Replace with IMD / OpenWeather API in production.</p>
+      <div id="weather" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+    </section>
+
+    <footer>Prototype — for demonstration only. To integrate real models or APIs I can help wire up the backend.</footer>
+  </div>
+
+  <script>
+    // --- Translations (English & Hindi) ---
+    const LOCALES = {
+      en: {
+        title: 'AI Crop Recommendation (Prototype)',
+        subtitle: 'Localized, offline-first demo — mock data & simple logic',
+        farmerInput: 'Farmer Input',
+        getRecommendation: 'Get Recommendation',
+        print: 'Print / Save Report',
+        detect: 'Detect',
+        feedbackHelpful: 'Thanks — your feedback is saved locally.'
+      },
+      hi: {
+        title: 'एआई फसल सुझाव (प्रोटोटाइप)',
+        subtitle: 'स्थानीय, ऑफ़लाइन-फर्स्ट डेमो — मॉक डेटा और सरल लॉजिक',
+        farmerInput: 'किसान इनपुट',
+        getRecommendation: 'सुझाव प्राप्त करें',
+        print: 'प्रिंट / रिपोर्ट सहेजें',
+        detect: 'पता लगाएँ',
+        feedbackHelpful: 'धन्यवाद — आपकी प्रतिक्रिया स्थानीय रूप से सहेजी गई है।'
+      }
+    };
+
+    let lang = localStorage.getItem('proto_lang') || 'en';
+
+    // --- Simple crop database with preference ranges (mock) ---
+    const CROPS = [
+      {id:'wheat', name:{en:'Wheat', hi:'गेहूँ'}, n:[40,90], p:[10,40], k:[20,80], ph:[6,7.8], moist:[30,70], baseYield:3.5},
+      {id:'rice', name:{en:'Rice', hi:'चावल'}, n:[50,120], p:[15,60], k:[30,120], ph:[5.5,7.5], moist:[60,100], baseYield:4.2},
+      {id:'maize', name:{en:'Maize', hi:'मक्का'}, n:[30,80], p:[10,40], k:[20,60], ph:[5.8,7.5], moist:[30,70], baseYield:6.0},
+      {id:'millet', name:{en:'Millet', hi:'बाजरा'}, n:[10,40], p:[5,30], k:[10,50], ph:[5.5,8.0], moist:[10,40], baseYield:1.8},
+      {id:'pulse', name:{en:'Pulses', hi:'दालें'}, n:[10,60], p:[8,40], k:[10,60], ph:[6,8.0], moist:[20,60], baseYield:1.2},
+      {id:'cotton', name:{en:'Cotton', hi:'कपास'}, n:[30,80], p:[10,40], k:[20,80], ph:[6,7.8], moist:[30,70], baseYield:1.0}
+    ];
+
+    // Utility: clamp and score function
+    function rangeScore(value, range){
+      if (!range || range.length!==2) return 0;
+      const [min,max] = range;
+      if (value >= min && value <= max) return 1; // perfect
+      const span = Math.max(max-min,1);
+      const d = Math.min(Math.abs(value-min), Math.abs(value-max));
+      const score = Math.max(0, 1 - (d/span));
+      return parseFloat(score.toFixed(2));
+    }
+
+    // --- DOM refs ---
+    const $ = id => document.getElementById(id);
+    const recommendBtn = $('recommendBtn');
+    const resultsEl = $('results');
+    const printBtn = $('printBtn');
+    const detectGeo = $('detectGeo');
+    const toggleLang = $('toggleLang');
+    const resetBtn = $('resetBtn');
+    const thumbUp = $('thumbUp');
+    const thumbDown = $('thumbDown');
+    const feedbackMsg = $('feedbackMsg');
+    const weatherEl = $('weather');
+
+    // Apply translations
+    function applyLocale(){
+      const t = LOCALES[lang];
+      $('title').innerText = t.title;
+      $('subtitle').innerText = t.subtitle;
+      $('form-heading').innerText = t.farmerInput;
+      recommendBtn.innerText = t.getRecommendation;
+      printBtn.innerText = t.print;
+      detectGeo.innerText = t.detect;
+      toggleLang.innerText = lang === 'en' ? 'हिंदी' : 'EN';
+      localStorage.setItem('proto_lang', lang);
+    }
+
+    // Load saved input
+    function loadSaved(){
+      try{
+        const saved = JSON.parse(localStorage.getItem('proto_inputs')||'{}');
+        if (saved.location) $('location').value = saved.location;
+        if (saved.n) $('nitrogen').value = saved.n;
+        if (saved.p) $('phosphorus').value = saved.p;
+        if (saved.k) $('potassium').value = saved.k;
+        if (saved.ph) $('ph').value = saved.ph;
+        if (saved.moisture) $('moisture').value = saved.moisture;
+        if (saved.prevCrop) $('prevCrop').value = saved.prevCrop;
+      }catch(e){console.warn('load failed',e)}
+    }
+
+    function saveInputs(){
+      const obj = {
+        location: $('location').value,
+        n: $('nitrogen').value,
+        p: $('phosphorus').value,
+        k: $('potassium').value,
+        ph: $('ph').value,
+        moisture: $('moisture').value,
+        prevCrop: $('prevCrop').value
+      };
+      localStorage.setItem('proto_inputs', JSON.stringify(obj));
+    }
+
+    // Recommendation algorithm (mock): scores crops by how well inputs fit preferences
+    function recommend(){
+      const n = Number($('nitrogen').value || 0);
+      const p = Number($('phosphorus').value || 0);
+      const k = Number($('potassium').value || 0);
+      const ph = Number($('ph').value || 6.5);
+      const moisture = Number($('moisture').value || 40);
+      const prevCrop = $('prevCrop').value;
+
+      saveInputs();
+
+      // If no meaningful input, prompt
+      if (!n && !p && !k && !ph && !moisture){
+        resultsEl.innerHTML = '<div class="small muted">Please provide at least one soil or moisture value to get a recommendation.</div>';
+        return;
+      }
+
+      const scored = CROPS.map(crop => {
+        const sN = rangeScore(n, crop.n);
+        const sP = rangeScore(p, crop.p);
+        const sK = rangeScore(k, crop.k);
+        const sPH = rangeScore(ph, crop.ph);
+        const sM = rangeScore(moisture, crop.moist);
+        // weight nutrients moderately, moisture and pH higher
+        const score = (sN*0.2 + sP*0.15 + sK*0.15 + sPH*0.25 + sM*0.25);
+        // small penalty if same as previous crop (encourage rotation)
+        const rotationPenalty = (prevCrop === crop.id) ? 0.9 : 1.0;
+        const finalScore = parseFloat((score * rotationPenalty).toFixed(3));
+        // estimate yield (mock): base * weighted factor
+        const soilFactor = (sN + sP + sK) / 3; // 0..1
+        const yieldEst = parseFloat((crop.baseYield * (0.6 + soilFactor*0.8) * (0.8 + sM*0.4)).toFixed(2));
+        return {...crop, score: finalScore, yieldEst};
+      }).sort((a,b)=> b.score - a.score);
+
+      // Build result HTML
+      let html = '';
+      scored.slice(0,4).forEach((c,idx)=>{
+        const conf = Math.round(c.score*100);
+        html += `<div class="result-item" role="article">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><strong>${c.name[lang] || c.name.en}</strong></div>
+            <div class="small muted">Confidence: ${conf}%</div>
+          </div>
+          <div class="small muted">Estimated yield: ${c.yieldEst} t/ha (mock)</div>
+          <div style="margin-top:8px">
+            <strong>Fertilizer suggestion:</strong>
+            <div class="small">Apply balanced NPK. Suggested starter: ${Math.max(0, Math.round((60 - Number($('nitrogen').value || 0))/10))*1} kg NPK blend per hectare (mock).</div>
+            <div class="small" style="margin-top:6px"><strong>Irrigation:</strong> ${c.moist[0] >= 60 ? 'Keep flooded / higher moisture' : 'Supplemental irrigation recommended if rainfall is low.'}</div>
+          </div>
+        </div>`;
+      });
+
+      // show full ranking link
+      html += `<div style="margin-top:8px" class="small muted">Full ranking: ${scored.map(s=>s.name[lang]||s.name.en).join(', ')}</div>`;
+      resultsEl.innerHTML = html;
+
+      // voice guidance (optional)
+      try{
+        const msg = new SpeechSynthesisUtterance(`${scored[0].name[lang] || scored[0].name.en} is recommended with confidence ${Math.round(scored[0].score*100)} percent.`);
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(msg);
+      }catch(e){/* ignore on unsupported browsers */}
+    }
+
+    // Mock weather generation for prototype
+    function mockWeather(){
+      const days = ['Today','Tomorrow','Day 3','Day 4','Day 5'];
+      weatherEl.innerHTML = '';
+      for(let i=0;i<5;i++){
+        const t = 25 + Math.round(Math.random()*10);
+        const r = Math.round(Math.random()*80);
+        const p = document.createElement('div');
+        p.className = 'card';
+        p.style.minWidth = '140px';
+        p.innerHTML = `<div><strong>${days[i]}</strong></div><div class=small>${t}°C, Rain ${r}%</div>`;
+        weatherEl.appendChild(p);
+      }
+    }
+
+    // Geolocation helper
+    detectGeo.addEventListener('click', async ()=>{
+      if (!navigator.geolocation) return alert('Geolocation not supported');
+      detectGeo.disabled = true; detectGeo.innerText = 'Finding...';
+      navigator.geolocation.getCurrentPosition(pos =>{
+        const {latitude, longitude} = pos.coords;
+        $('location').value = `Lat:${latitude.toFixed(3)}, Lon:${longitude.toFixed(3)}`;
+        detectGeo.disabled = false; detectGeo.innerText = LOCALES[lang].detect;
+      }, err=>{alert('Could not detect location'); detectGeo.disabled=false; detectGeo.innerText=LOCALES[lang].detect});
+    });
+
+    // Print / Save report
+    printBtn.addEventListener('click', ()=>{
+      window.print();
+    });
+
+    recommendBtn.addEventListener('click', recommend);
+
+    // Language toggle
+    toggleLang.addEventListener('click', ()=>{
+      lang = lang === 'en' ? 'hi' : 'en';
+      applyLocale();
+      renderSavedLabels();
+    });
+
+    // Reset
+    resetBtn.addEventListener('click', ()=>{
+      if (!confirm('Clear saved inputs and results?')) return;
+      localStorage.removeItem('proto_inputs');
+      localStorage.removeItem('proto_lang');
+      location.reload();
+    });
+
+    // Feedback
+    thumbUp.addEventListener('click', ()=>{
+      const key = 'proto_feedback';
+      const val = JSON.parse(localStorage.getItem(key)||'{}');
+      val.up = (val.up||0)+1; localStorage.setItem(key, JSON.stringify(val));
+      feedbackMsg.innerText = LOCALES[lang].feedbackHelpful;
+    });
+    thumbDown.addEventListener('click', ()=>{
+      const key = 'proto_feedback';
+      const val = JSON.parse(localStorage.getItem(key)||'{}');
+      val.down = (val.down||0)+1; localStorage.setItem(key, JSON.stringify(val));
+      feedbackMsg.innerText = 'Thanks — noted.';
+    });
+
+    // Populate initial UI
+    function renderSavedLabels(){
+      // This function demonstrates where additional translations would be applied.
+      // For prototype brevity only a few labels are wired to LOCALES above.
+    }
+
+    // initial
+    applyLocale(); loadSaved(); mockWeather();
+  </script>
+
+  <!--
+    HOW TO USE THIS PROTOTYPE
+    1. Save this file as ai-crop-prototype.html and open in a browser.
+    2. Fill soil values and click "Get Recommendation" to see mock recommendations.
+    3. This is an offline single-file prototype. To move to production:
+       - Replace the mock crop database with a server-backed model (REST API)
+       - Integrate IMD / OpenWeather or AgriStack APIs for real weather/market data
+       - Securely store user profiles and link to AgriStack Farmer ID
+       - Replace mock fertilizer/irrigation suggestions with domain-expert rules or model outputs
+  -->
+</body>
+</html>
